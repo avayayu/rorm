@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	ztime "github.com/avayayu/micro/time"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -31,7 +30,6 @@ type OrmQuery interface {
 //Loader 实现loader的结构体将自动从数据库加载数据
 type RormLoader interface {
 	Loader(v interface{}) error
-	Version() ztime.Time
 }
 
 // --------------------------------------------------------------------
