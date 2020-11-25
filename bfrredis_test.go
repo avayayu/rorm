@@ -1,11 +1,14 @@
 package rorm
 
 import (
+	"context"
+	"flag"
 	"fmt"
+	"os"
 	"testing"
 )
 
-type redisTest struct {
+type RedisTest struct {
 	ID         string `redis:"primary"`
 	TEST       int
 	TEST2      float64
@@ -15,8 +18,11 @@ type redisTest struct {
 	BYTES      byte
 	PTRTEST    *string
 	SLICE      []string
-	TestStruct *TestStruct
+	TESTID     string
+	TestStruct *TestStruct `redis:"foreignKey:TESTID"`
 }
+
+var redisClient *BFRRedis
 
 type TestStruct struct {
 	TEST1  string `redis:"primary"`
@@ -29,16 +35,28 @@ func (r *TestStruct) Key() string {
 	return "testInner"
 }
 
-func (r *redisTest) Key() string {
+func (r *RedisTest) Key() string {
 	return "test"
+}
+
+func TestMain(m *testing.M) {
+
+	redisClient = NewBFRRedis(NewDefaultOptions(), nil)
+
+	flag.Parse()
+	exitCode := m.Run()
+
+	redisClient = nil
+
+	// 退出
+	os.Exit(exitCode)
 }
 
 func TestBFRRedis_GetPrimaryKey(t *testing.T) {
 	type args struct {
-		v *redisTest
+		v *RedisTest
 	}
 
-	redis := NewBFRRedis(NewDefaultOptions(), nil)
 	haha := "ptrtest"
 	tests := []struct {
 		name        string
@@ -49,9 +67,9 @@ func TestBFRRedis_GetPrimaryKey(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name:  "simple Test",
-			redis: redis,
+			redis: redisClient,
 			args: args{
-				v: &redisTest{
+				v: &RedisTest{
 					ID:      "TEST",
 					TEST:    1,
 					TEST2:   1.1,
@@ -72,14 +90,14 @@ func TestBFRRedis_GetPrimaryKey(t *testing.T) {
 	}
 }
 
-func TestBFRRedis_SaveSimpleStructObject(t *testing.T) {
+func TestBFRRedis_Create(t *testing.T) {
 	type args struct {
-		v *redisTest
+		v     *RedisTest
+		query *Query
 	}
 
 	haha := "ptrtest"
 
-	redis := NewBFRRedis(NewDefaultOptions(), nil)
 	tests := []struct {
 		name        string
 		redis       *BFRRedis
@@ -89,10 +107,10 @@ func TestBFRRedis_SaveSimpleStructObject(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name:  "simple Test",
-			redis: redis,
+			redis: redisClient,
 			args: args{
-				v: &redisTest{
-					ID:      "try11",
+				v: &RedisTest{
+					ID:      "try12",
 					TEST:    1,
 					TEST2:   4.1,
 					TEST3:   55,
@@ -101,8 +119,9 @@ func TestBFRRedis_SaveSimpleStructObject(t *testing.T) {
 					BYTES:   1,
 					PTRTEST: &haha,
 					SLICE:   []string{"asd", "haha", "ddddd"},
+					TESTID:  "inner3",
 					TestStruct: &TestStruct{
-						TEST1:  "inner",
+						TEST1:  "inner3",
 						Haha:   false,
 						SLICE2: []string{"asd", "haha", "ddddd"},
 						MAP: map[string]string{
@@ -111,45 +130,17 @@ func TestBFRRedis_SaveSimpleStructObject(t *testing.T) {
 						},
 					},
 				},
+				query: redisClient.NewQuery(),
 			},
 			wantFullKey: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.redis.SaveSimpleStructObject(tt.args.v); err != nil {
+			if err := tt.args.query.Create(context.Background(), tt.args.v); err != nil {
 				fmt.Println(err)
 			}
 		})
 	}
 }
 
-func TestBFRRedis_RetrieveData(t *testing.T) {
-	type args struct {
-		v *redisTest
-	}
-	redis := NewBFRRedis(NewDefaultOptions(), nil)
-	data := &redisTest{ID: "try11"}
-	tests := []struct {
-		name    string
-		redis   *BFRRedis
-		args    args
-		wantErr bool
-	}{
-		{
-			name:  "simple Test",
-			redis: redis,
-			args: args{
-				v: data,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.redis.RetrieveData(tt.args.v); (err != nil) != tt.wantErr {
-				t.Errorf("BFRRedis.RetrieveData() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}

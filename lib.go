@@ -1,6 +1,8 @@
 package rorm
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/rand"
 	"reflect"
 	"time"
@@ -40,4 +42,50 @@ func GetTypeFullName(myvar interface{}) string {
 	} else {
 		return t.PkgPath() + "/" + t.Name()
 	}
+}
+
+func ConvertStructToMap(v interface{}) map[string]string {
+	data := make(map[string]string)
+
+	val := reflect.ValueOf(v).Elem()
+	typ := reflect.TypeOf(v)
+
+	num := val.NumField()
+
+	for i := 0; i < num; i++ {
+		key := typ.Elem().Field(i).Name
+		field := val.FieldByName(key)
+		Value := field.Interface()
+		switch field.Kind() {
+		case reflect.Ptr:
+			switch field.Elem().Kind() {
+			case reflect.Struct:
+			case reflect.Ptr:
+			case reflect.Bool:
+				if field.Interface().(bool) {
+					data[key] = "1"
+				} else {
+					data[key] = "0"
+				}
+			case reflect.Array, reflect.Slice, reflect.Map:
+				json, _ := json.Marshal(Value)
+				data[key] = string(json)
+			default:
+				data[key] = fmt.Sprintf("%v", field.Elem().Interface())
+			}
+		case reflect.Struct: //对于结构体 将直接作为一个单独的HMAP存储
+		case reflect.Slice, reflect.Array, reflect.Map: //对于Slice Array Map三种类型 直接存储其对应的JSON
+			json, _ := json.Marshal(Value)
+			data[key] = string(json)
+		case reflect.Bool:
+			if field.Interface().(bool) {
+				data[key] = "1"
+			} else {
+				data[key] = "0"
+			}
+		default:
+			data[key] = fmt.Sprintf("%v", field.Interface())
+		}
+	}
+	return data
 }

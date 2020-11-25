@@ -7,11 +7,9 @@ import (
 	"errors"
 	"io"
 	"strconv"
-	"sync"
 	"time"
 
 	redis "github.com/go-redis/redis/v8"
-	"go.uber.org/zap"
 )
 
 var (
@@ -25,22 +23,7 @@ var (
 	luaPTTL    = redis.NewScript(`if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pttl", KEYS[1]) else return -3 end`)
 )
 
-//RedisMutex 基于redis实现的分布式锁
-type RedisMutex struct {
-	client RedisClient
-	logger *zap.Logger
-
-	tmp   []byte
-	tmpMu sync.Mutex
-
-	LockMap sync.Map
-}
-
-func New(client RedisClient, logger *zap.Logger) *RedisMutex {
-	return &RedisMutex{client: client, logger: logger}
-}
-
-func (m *RedisMutex) TryObtain(ctx context.Context, key string, ttl time.Duration, retry RetryStrategy) (lock *Lock, err error) {
+func (m *BFRRedis) TryObtain(ctx context.Context, key string, ttl time.Duration, retry RetryStrategy) (lock *Lock, err error) {
 
 	// value := lib
 	token, err := m.randomToken()
@@ -55,7 +38,9 @@ func (m *RedisMutex) TryObtain(ctx context.Context, key string, ttl time.Duratio
 		if err != nil {
 			return nil, err
 		} else if ok {
-			return &Lock{client: m.client, key: key, value: token}, nil
+			lock = &Lock{client: m.client, key: key, value: token, Status: true}
+			m.LockMap.Store(key, lock)
+			return lock, err
 		}
 
 		backoff := retry.NextBackoff()
@@ -81,11 +66,11 @@ func (m *RedisMutex) TryObtain(ctx context.Context, key string, ttl time.Duratio
 
 }
 
-func (m *RedisMutex) obtain(key, value string, ttl time.Duration) (bool, error) {
+func (m *BFRRedis) obtain(key, value string, ttl time.Duration) (bool, error) {
 	return m.client.SetNX(context.Background(), key, value, ttl).Result()
 }
 
-func (m *RedisMutex) randomToken() (string, error) {
+func (m *BFRRedis) randomToken() (string, error) {
 	m.tmpMu.Lock()
 	defer m.tmpMu.Unlock()
 
@@ -99,24 +84,14 @@ func (m *RedisMutex) randomToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(m.tmp), nil
 }
 
-// //LockOptions 锁配置
-// type LockOptions struct {
-// 	retry RetryStrategy
-// }
-
 type Lock struct {
-	client RedisClient
+	client Redisclient
 	key    string
 	value  string
 	tll    time.Duration
 	Status bool
 }
 
-// func (l *Lock) Lock() {
-// 	l.client.SetNX(context.Background(), l.key, l.value, l.tll)
-// }
-
-// TTL returns the remaining time-to-live. Returns 0 if the lock has expired.
 func (lock *Lock) TTL() (time.Duration, error) {
 	res, err := luaPTTL.Run(context.Background(), lock.client, []string{lock.key}, lock.value).Result()
 	if err == redis.Nil {
@@ -160,14 +135,6 @@ func (lock *Lock) Release() error {
 	return nil
 }
 
-// --------------------------------------------------------------------
-
-// RetryStrategy allows to customise the lock retry strategy.
-type RetryStrategy interface {
-	// NextBackoff returns the next backoff duration.
-	NextBackoff() time.Duration
-}
-
 type linearBackoff time.Duration
 
 // LinearBackoff allows retries regularly with customized intervals
@@ -204,8 +171,7 @@ func (r *limitedRetry) NextBackoff() time.Duration {
 }
 
 type exponentialBackoff struct {
-	cnt uint
-
+	cnt      uint
 	min, max time.Duration
 }
 
