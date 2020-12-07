@@ -16,12 +16,12 @@ var (
 	RormPrimaryKeyNotFound = errors.New("struct need have one primary key not found")
 )
 
-type Redis interface {
-	Create(ctx context.Context, v interface{}) error
-	Find(ctx context.Context, v interface{}) (err error)
-	Update(ctx context.Context, model interface{}, fieldName string, v interface{}) (err error)
-	Updates(ctx context.Context, model interface{}, data map[string]interface{}) (err error)
-}
+// type Redis interface {
+// 	Create(ctx context.Context, v interface{}) error
+// 	Find(ctx context.Context, v interface{}) (err error)
+// 	Update(ctx context.Context, model interface{}, fieldName string, v interface{}) (err error)
+// 	Updates(ctx context.Context, model interface{}, data map[string]interface{}) (err error)
+// }
 
 type OrmQuery interface {
 	Where(pattern string) *Query
@@ -32,6 +32,14 @@ type OrmQuery interface {
 //Loader 实现loader的结构体将自动从数据库加载数据
 type RormLoader interface {
 	Loader(v interface{}) error
+}
+
+type Valuer interface {
+	RedisValue() string
+}
+
+type Scanner interface {
+	RedisScan(src interface{}) error
 }
 
 // --------------------------------------------------------------------

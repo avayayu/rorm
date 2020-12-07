@@ -64,6 +64,8 @@ func (query *Query) pipeHSet(ctx context.Context, pipe redis.Pipeliner, key stri
 	case reflect.Ptr:
 		switch field.Elem().Kind() {
 		case reflect.Struct:
+			//如果字段支持直接序列化则直接序列为字符串
+			query.saveStruct(ctx, pipe, key, fieldName, field)
 			if query.Association {
 				if err = query.Create(ctx, (&field).Interface()); err != nil {
 					return err
@@ -84,8 +86,10 @@ func (query *Query) pipeHSet(ctx context.Context, pipe redis.Pipeliner, key stri
 			}
 		}
 	case reflect.Struct: //对于结构体 将直接作为一个单独的HMAP存储
-		structValue2 := field.Interface()
+		//先查看是否为
+		query.saveStruct(ctx, pipe, key, fieldName, field)
 		if query.Association {
+			structValue2 := field.Interface()
 			if err := query.Create(ctx, structValue2); err != nil {
 				return err
 			}
@@ -343,6 +347,15 @@ func (query *Query) retrieveData(data map[string]string, v interface{}) (err err
 		case reflect.Struct:
 			//pass struct.
 			//deal it in function loadForeignModel
+			//判断该字段是否直接支持RormData接口，如果支持则直接使用接口反序列化
+			data := field.Addr().Interface()
+			if dataInterce, ok := data.(Scanner); ok {
+				dataInterce.RedisScan([]byte(value))
+				data := reflect.ValueOf(dataInterce).Interface()
+			
+				field.Set(reflect.ValueOf(data).Elem())
+			}
+		
 		case reflect.Ptr:
 			typ := reflect.TypeOf(field.Interface())
 			ptr := reflect.New(typ.Elem()).Interface()
@@ -492,7 +505,10 @@ func (r *Query) PtrData(data string, v interface{}) (err error) {
 			return err
 		}
 	case reflect.Struct:
-
+		if dataInterce, ok := v.(Scanner); ok {
+			realData := dataInterce.RedisScan(data)
+			reflect.ValueOf(v).Elem().Set(reflect.ValueOf(realData))
+		}
 	case reflect.Chan, reflect.Complex64, reflect.Complex128, reflect.Func, reflect.Invalid, reflect.UnsafePointer:
 		r.logger.Warn("this type can not be reflect", zap.String("fieldName", reflect.TypeOf(v).Name()), zap.String("value", data))
 	case reflect.Ptr:
@@ -501,5 +517,16 @@ func (r *Query) PtrData(data string, v interface{}) (err error) {
 		reflect.ValueOf(v).Elem().Set(reflect.ValueOf(data))
 	}
 	return
+}
 
+func (r *Query) saveStruct(ctx context.Context, pipe redis.Pipeliner, key, fieldName string, value reflect.Value) (err error) {
+	valueInterface := value.Interface()
+	if data, ok := valueInterface.(Valuer); ok {
+		dataString := data.RedisValue()
+		cmd := pipe.HSet(ctx, key, fieldName, dataString)
+		if err = cmd.Err(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

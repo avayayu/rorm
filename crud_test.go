@@ -184,7 +184,7 @@ func TestBFRRedis_Find(t *testing.T) {
 		query *Query
 	}
 
-	data := &RedisTest{ID: "try12"}
+	data := &RedisTest{ID: "try15"}
 	tests := []struct {
 		name    string
 		redis   *BFRRedis
@@ -226,6 +226,7 @@ func TestBFRRedis_Find(t *testing.T) {
 			} else {
 				if err != nil {
 					fmt.Println(tt.args.v)
+					fmt.Println(tt.args.v.TIMETEST)
 				}
 			}
 		})

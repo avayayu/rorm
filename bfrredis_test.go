@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	ztime "github.com/avayayu/micro/time"
 )
 
 type RedisTest struct {
@@ -19,6 +21,7 @@ type RedisTest struct {
 	PTRTEST    *string
 	SLICE      []string
 	TESTID     string
+	TIMETEST   ztime.Time
 	TestStruct *TestStruct `redis:"foreignKey:TESTID"`
 }
 
@@ -70,12 +73,13 @@ func TestBFRRedis_GetPrimaryKey(t *testing.T) {
 			redis: redisClient,
 			args: args{
 				v: &RedisTest{
-					ID:      "TEST",
-					TEST:    1,
-					TEST2:   1.1,
-					TEST3:   1,
-					PayLoad: "asdasdasdasd",
-					PTRTEST: &haha,
+					ID:       "TEST",
+					TEST:     1,
+					TEST2:    1.1,
+					TEST3:    1,
+					PayLoad:  "asdasdasdasd",
+					PTRTEST:  &haha,
+					TIMETEST: ztime.Now(),
 				},
 			},
 			wantFullKey: "",
@@ -110,16 +114,17 @@ func TestBFRRedis_Create(t *testing.T) {
 			redis: redisClient,
 			args: args{
 				v: &RedisTest{
-					ID:      "try12",
-					TEST:    1,
-					TEST2:   4.1,
-					TEST3:   55,
-					PayLoad: "asdasdasdasd",
-					HAHA:    true,
-					BYTES:   1,
-					PTRTEST: &haha,
-					SLICE:   []string{"asd", "haha", "ddddd"},
-					TESTID:  "inner3",
+					ID:       "try15",
+					TEST:     1,
+					TEST2:    4.1,
+					TEST3:    55,
+					PayLoad:  "asdasdasdasd",
+					HAHA:     true,
+					BYTES:    1,
+					PTRTEST:  &haha,
+					TIMETEST: ztime.Now(),
+					SLICE:    []string{"asd", "haha", "ddddd"},
+					TESTID:   "inner3",
 					TestStruct: &TestStruct{
 						TEST1:  "inner3",
 						Haha:   false,
@@ -143,4 +148,3 @@ func TestBFRRedis_Create(t *testing.T) {
 		})
 	}
 }
-
