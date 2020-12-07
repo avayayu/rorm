@@ -23,6 +23,17 @@ func TestQuery_Update(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
+		{
+			name:  "update with key not exist in redis",
+			query: redisClient.NewQuery(),
+			args: args{
+				ctx:       context.Background(),
+				model:     &RedisTest{ID: "qweqweqwee"},
+				fieldName: "TEST2",
+				v:         2.8,
+			},
+			wantErr: true,
+		},
 		// TODO: Add test cases.
 		{
 			name:  "update single attribute float64",
@@ -96,17 +107,20 @@ func TestQuery_Update(t *testing.T) {
 			if err := tt.query.Update(tt.args.ctx, tt.args.model, tt.args.fieldName, tt.args.v); (err != nil) != tt.wantErr {
 				t.Errorf("Query.Update() error = %v, wantErr %v", err, tt.wantErr)
 			} else {
-				test := &RedisTest{ID: tt.args.model.ID}
+				if !tt.wantErr {
+					test := &RedisTest{ID: tt.args.model.ID}
 
-				tt.query.Find(context.Background(), test)
+					tt.query.Find(context.Background(), test)
 
-				value := reflect.ValueOf(test).Elem()
+					value := reflect.ValueOf(test).Elem()
 
-				field := value.FieldByName(tt.args.fieldName)
+					field := value.FieldByName(tt.args.fieldName)
 
-				if !assert.Equal(t, field.Interface(), tt.args.v) {
-					t.Errorf("Query.Update() error = %v, wantErr %v", field.Interface(), tt.args.v)
+					if !assert.Equal(t, field.Interface(), tt.args.v) {
+						t.Errorf("Query.Update() error = %v, wantErr %v", field.Interface(), tt.args.v)
+					}
 				}
+
 			}
 		})
 	}

@@ -108,6 +108,13 @@ func (query *Query) Update(ctx context.Context, model interface{}, fieldName str
 	if err != nil {
 		return err
 	}
+
+	length, err := query.client.Exists(ctx, hashKey).Result()
+	if err != nil || length == 0 {
+		err = RormPrimaryKeyNotFound
+		return
+	}
+
 	line := query.client.Pipeline()
 
 	typ := reflect.TypeOf(model)
@@ -142,6 +149,12 @@ func (query *Query) Updates(ctx context.Context, model interface{}, data map[str
 	if err != nil {
 		return err
 	}
+	datatemp := map[string]string{}
+	if datatemp, err = query.client.HGetAll(ctx, hashKey).Result(); len(datatemp) == 0 || err != nil {
+		err = RormPrimaryKeyNotFound
+		return
+	}
+
 	line := query.client.Pipeline()
 
 	typ := reflect.TypeOf(model)

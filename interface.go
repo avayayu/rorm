@@ -16,9 +16,11 @@ var (
 	RormPrimaryKeyNotFound = errors.New("struct need have one primary key not found")
 )
 
-type Oorm interface {
+type Redis interface {
 	Create(ctx context.Context, v interface{}) error
 	Find(ctx context.Context, v interface{}) (err error)
+	Update(ctx context.Context, model interface{}, fieldName string, v interface{}) (err error)
+	Updates(ctx context.Context, model interface{}, data map[string]interface{}) (err error)
 }
 
 type OrmQuery interface {
@@ -55,7 +57,7 @@ type Redisclient interface {
 	Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd
 	HGetAll(context.Context, string) *redis.StringStringMapCmd
 	SetNX(context.Context, string, interface{}, time.Duration) *redis.BoolCmd
-
+	Exists(ctx context.Context, keys ...string) *redis.IntCmd
 	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
 	EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) *redis.Cmd
 	ScriptExists(ctx context.Context, hashes ...string) *redis.BoolSliceCmd
