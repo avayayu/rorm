@@ -70,4 +70,6 @@ type Redisclient interface {
 	EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) *redis.Cmd
 	ScriptExists(ctx context.Context, hashes ...string) *redis.BoolSliceCmd
 	ScriptLoad(ctx context.Context, script string) *redis.StringCmd
+	Publish(ctx context.Context, channel string, message interface{}) *redis.IntCmd
+	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
 }
