@@ -9,11 +9,13 @@ import (
 )
 
 type BFRRedis struct {
-	client  Redisclient //单个node
-	logger  *zap.Logger
-	tmp     []byte
-	tmpMu   sync.Mutex
-	LockMap sync.Map
+	client           Redisclient //单个node
+	rawClient        *redis.Client
+	rawClusterClient *redis.ClusterClient
+	logger           *zap.Logger
+	tmp              []byte
+	tmpMu            sync.Mutex
+	LockMap          sync.Map
 }
 
 type ExpireTime struct {
@@ -36,6 +38,7 @@ func NewBFRRedis(options *Options, logger *zap.Logger) *BFRRedis {
 
 		client := redis.NewClient(&redisOptions)
 		bredis.client = client
+		bredis.rawClient = client
 	} else {
 		redisClusterOptions := redis.ClusterOptions{}
 		addrList := []string{}
@@ -48,6 +51,15 @@ func NewBFRRedis(options *Options, logger *zap.Logger) *BFRRedis {
 		redisClusterOptions.Addrs = addrList
 		client := redis.NewClusterClient(&redisClusterOptions)
 		bredis.client = client
+		bredis.rawClusterClient = client
 	}
 	return bredis
+}
+
+func (m *BFRRedis) GetClient() *redis.Client {
+	return m.rawClient
+}
+
+func (m *BFRRedis) GetClusterClient() *redis.ClusterClient {
+	return m.rawClusterClient
 }
