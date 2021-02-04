@@ -31,11 +31,14 @@ func NewBFRRedis(options *Options, logger *zap.Logger) *BFRRedis {
 		for _, node := range options.AddressMap {
 			redisOptions.Addr = node.URL + ":" + node.Port
 			redisOptions.DB = node.DB
-			redisOptions.Username = node.Username
-			redisOptions.Password = node.Password
+			if node.Username != "" {
+				redisOptions.Username = node.Username
+			}
+			if node.Password != "" {
+				redisOptions.Password = node.Password
+			}
 			break
 		}
-
 		client := redis.NewClient(&redisOptions)
 		bredis.client = client
 		bredis.rawClient = client
