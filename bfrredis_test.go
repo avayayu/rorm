@@ -45,13 +45,11 @@ func (r *RedisTest) Key() string {
 func TestMain(m *testing.M) {
 
 	redisClient = NewBFRRedis(NewDefaultOptions(), nil)
-	
+
 	flag.Parse()
 	exitCode := m.Run()
 
 	redisClient = nil
-
-	
 
 	// 退出
 	os.Exit(exitCode)

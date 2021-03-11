@@ -5,6 +5,9 @@
     "go.testEnvVars": {
         "cloudbrainMode":"dev"
     },
+    "terminal.integrated.splitCwd": "workspaceRoot",
+    "terminal.integrated.fontFamily": "'Noto Mono for Powerline'",
+    "terminal.integrated.fontSize": 14,
     "go.autocompleteUnimportedPackages": true,
     "[go]": {
         "editor.formatOnSave": true,
