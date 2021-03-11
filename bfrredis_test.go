@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	ztime "github.com/avayayu/micro/time"
+	ztime "gogs.bfr.com/zouhy/micro/time"
 )
 
 type RedisTest struct {
