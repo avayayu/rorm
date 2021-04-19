@@ -23,7 +23,7 @@ func (query *Query) Create(ctx context.Context, v interface{}) (err error) {
 		fmt.Printf("Field %d:值=%v\n", i, val.Field(i))
 		//获取到struct标签，需要通过reflect.Type来获取tag标签的值
 		fieldName := typ.Elem().Field(i).Name
-		redisTag := typ.Elem().Field(i).Tag
+		redisTag := typ.Elem().Field(i).Tag.Get("redis")
 
 		if redisTag == "-" {
 			continue
